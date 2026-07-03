@@ -356,6 +356,80 @@ def download_weights(segnet_use_gpu: bool, transformer_use_gpu: bool, coreml_enc
                     os.remove(downloaded_zip)
 
 
+def _run_jianpu_convert(input_musicxml: str, output_prefix: str) -> None:
+    """Convert a MusicXML file to jianpu .jtokens and .svg files."""
+    from homr.jianpu.musicxml_to_jianpu import parse_musicxml_file_to_jianpu
+    from homr.jianpu.svg_renderer import render_jianpu_svg_to_file
+    from homr.jianpu.token_io import write_jianpu_tokens_to_file
+
+    eprint(f"Converting {input_musicxml} to jianpu...")
+    symbols = parse_musicxml_file_to_jianpu(input_musicxml)
+
+    tokens_path = output_prefix + ".jtokens"
+    svg_path = output_prefix + ".svg"
+
+    write_jianpu_tokens_to_file(symbols, tokens_path)
+    render_jianpu_svg_to_file(symbols, svg_path, title="Jianpu Conversion")
+
+    eprint(f"Wrote {tokens_path} and {svg_path}")
+
+
+def _run_jianpu_render(input_jtokens: str, output_svg: str) -> None:
+    """Render a .jtokens file to an SVG file."""
+    from homr.jianpu.svg_renderer import render_jianpu_svg_to_file
+    from homr.jianpu.token_io import read_jianpu_tokens
+
+    eprint(f"Rendering {input_jtokens} to {output_svg}...")
+    symbols = read_jianpu_tokens(input_jtokens)
+    render_jianpu_svg_to_file(symbols, output_svg, title="Jianpu Render")
+    eprint(f"Wrote {output_svg}")
+
+
+def _run_jianpu_generate(count_str: str, output_dir: str, render_png: bool) -> None:
+    """Generate random jianpu training data."""
+    from homr.jianpu.data_generator import generate_dataset
+
+    count = int(count_str)
+    eprint(f"Generating {count} jianpu samples in {output_dir}...")
+    files = generate_dataset(count, output_dir, render_png=render_png)
+    eprint(f"Generated {len(files)} samples")
+    if render_png:
+        eprint("PNG rendering enabled (requires cairosvg)")
+
+
+def _run_jianpu_to_musicxml(input_jtokens: str, output_musicxml: str) -> None:
+    """Convert a .jtokens file to MusicXML."""
+    from homr.jianpu.jianpu_to_musicxml import jianpu_to_musicxml_file
+    from homr.jianpu.token_io import read_jianpu_tokens
+
+    eprint(f"Converting {input_jtokens} to MusicXML...")
+    symbols = read_jianpu_tokens(input_jtokens)
+    jianpu_to_musicxml_file(symbols, output_musicxml, title="Jianpu to MusicXML")
+    eprint(f"Wrote {output_musicxml}")
+
+
+def _run_jianpu_json2token(input_json: str, output_jtokens: str) -> None:
+    """Convert a jianpu-renderer JSON file to .jtokens format."""
+    from homr.jianpu.json_converter import json_to_tokens_from_file
+    from homr.jianpu.token_io import write_jianpu_tokens_to_file
+
+    eprint(f"Converting {input_json} to jianpu tokens...")
+    symbols = json_to_tokens_from_file(input_json)
+    write_jianpu_tokens_to_file(symbols, output_jtokens)
+    eprint(f"Wrote {output_jtokens} ({len(symbols)} tokens)")
+
+
+def _run_jianpu_token2json(input_jtokens: str, output_json: str) -> None:
+    """Convert a .jtokens file to jianpu-renderer JSON format."""
+    from homr.jianpu.json_converter import tokens_to_json_file
+    from homr.jianpu.token_io import read_jianpu_tokens
+
+    eprint(f"Converting {input_jtokens} to JSON...")
+    symbols = read_jianpu_tokens(input_jtokens)
+    tokens_to_json_file(symbols, output_json)
+    eprint(f"Wrote {output_json}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="homer", description="An optical music recognition (OMR) system"
@@ -409,7 +483,78 @@ def main() -> None:
         + "pays off when processing many images. Has no effect with CUDA.",
     )
 
+    # Jianpu (numbered notation) commands
+    parser.add_argument(
+        "--jianpu-convert",
+        type=str,
+        nargs=2,
+        metavar=("INPUT_MUSICXML", "OUTPUT_PREFIX"),
+        help="Convert a MusicXML file to jianpu .jtokens and .svg files. "
+        + "OUTPUT_PREFIX is used to generate <prefix>.jtokens and <prefix>.svg.",
+    )
+    parser.add_argument(
+        "--jianpu-render",
+        type=str,
+        nargs=2,
+        metavar=("INPUT_JTOKENS", "OUTPUT_SVG"),
+        help="Render a .jtokens file to an SVG file.",
+    )
+    parser.add_argument(
+        "--jianpu-generate",
+        type=str,
+        nargs="+",
+        metavar=("COUNT", "OUTPUT_DIR"),
+        help="Generate jianpu training data (random melodies). "
+        + "Usage: --jianpu-generate <count> <output_dir> [--png]",
+    )
+    parser.add_argument(
+        "--jianpu-to-musicxml",
+        type=str,
+        nargs=2,
+        metavar=("INPUT_JTOKENS", "OUTPUT_MUSICXML"),
+        help="Convert a .jtokens file to MusicXML format.",
+    )
+    parser.add_argument(
+        "--jianpu-json2token",
+        type=str,
+        nargs=2,
+        metavar=("INPUT_JSON", "OUTPUT_JTOKENS"),
+        help="Convert a jianpu-renderer JSON file to .jtokens format.",
+    )
+    parser.add_argument(
+        "--jianpu-token2json",
+        type=str,
+        nargs=2,
+        metavar=("INPUT_JTOKENS", "OUTPUT_JSON"),
+        help="Convert a .jtokens file to jianpu-renderer JSON format.",
+    )
+    parser.add_argument(
+        "--png",
+        action="store_true",
+        help="Also generate PNG files (requires cairosvg) when using --jianpu-generate.",
+    )
+
     args = parser.parse_args()
+
+    # Handle jianpu commands first (they don't need ML models)
+    if args.jianpu_convert:
+        _run_jianpu_convert(args.jianpu_convert[0], args.jianpu_convert[1])
+        return
+    if args.jianpu_render:
+        _run_jianpu_render(args.jianpu_render[0], args.jianpu_render[1])
+        return
+    if args.jianpu_generate:
+        _run_jianpu_generate(args.jianpu_generate[0], args.jianpu_generate[1], args.png)
+        return
+    if args.jianpu_to_musicxml:
+        _run_jianpu_to_musicxml(args.jianpu_to_musicxml[0], args.jianpu_to_musicxml[1])
+        return
+    if args.jianpu_json2token:
+        _run_jianpu_json2token(args.jianpu_json2token[0], args.jianpu_json2token[1])
+        return
+    if args.jianpu_token2json:
+        _run_jianpu_token2json(args.jianpu_token2json[0], args.jianpu_token2json[1])
+        return
 
     force_gpu = args.gpu == GpuSupport.FORCE
     auto_gpu = args.gpu == GpuSupport.AUTO

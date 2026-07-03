@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 30" width="120" height="30">
+  <rect width="120" height="30" fill="white"/>
+  <!-- 历音符号 (Glissando) - 标准简谱波浪线 -->
+  <path d="M 5,15 
+           C 10,3 16,3 21,15 
+           C 26,27 32,27 37,15 
+           C 42,3 48,3 53,15 
+           C 58,27 64,27 69,15 
+           C 74,3 80,3 85,15 
+           C 90,27 96,27 101,15 
+           C 106,3 112,3 117,15" 
+        fill="none" stroke="#1b1b1b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Jianpu Score",
+  "description": "简谱乐谱 JSON Schema，用于描述简谱的所有元素",
+  "type": "object",
+  "required": ["key", "timeSignature", "measures"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "乐谱标题"
+    },
+    "key": {
+      "type": "string",
+      "description": "调号，如 C, D, G, bB 等",
+      "pattern": "^[A-Ga-g][#b]?$"
+    },
+    "timeSignature": {
+      "type": "object",
+      "description": "拍号",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "分子（每小节拍数）"
+        },
+        "denominator": {
+          "type": "integer",
+          "enum": [1, 2, 4, 8, 16],
+          "description": "分母（音符类型）"
+        }
+      }
+    },
+    "tempo": {
+      "type": "integer",
+      "minimum": 20,
+      "maximum": 300,
+      "description": "速度（BPM）"
+    },
+    "tempoText": {
+      "type": "string",
+      "description": "速度文字，如 Andante, Allegro 等"
+    },
+    "dynamics": {
+      "type": "string",
+      "enum": ["pp", "p", "mp", "mf", "f", "ff"],
+      "description": "力度记号"
+    },
+    "measures": {
+      "type": "array",
+      "description": "小节列表",
+      "items": {
+        "$ref": "#/$defs/measure"
+      }
+    }
+  },
+  "$defs": {
+    "measure": {
+      "type": "object",
+      "required": ["notes"],
+      "properties": {
+        "notes": {
+          "type": "array",
+          "description": "小节内的音符和增时线列表",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/note" },
+              { "$ref": "#/$defs/dash" }
+            ]
+          }
+        },
+        "barline": {
+          "type": "string",
+          "enum": ["single", "double", "end", "repeat-start", "repeat-end"],
+          "description": "小节线类型（画在小节右侧）",
+          "default": "single"
+        },
+        "repeatEnding": {
+          "type": "object",
+          "description": "反复跳跃记号",
+          "required": ["numbers"],
+          "properties": {
+            "numbers": {
+              "type": "array",
+              "items": { "type": "integer" },
+              "description": "跳跃编号"
+            }
+          }
+        }
+      }
+    },
+    "note": {
+      "type": "object",
+      "required": ["pitch", "duration"],
+      "properties": {
+        "pitch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7,
+          "description": "音高：0=休止符, 1-7=do-si"
+        },
+        "octave": {
+          "type": "integer",
+          "minimum": -2,
+          "maximum": 2,
+          "description": "八度偏移，0=中央八度",
+          "default": 0
+        },
+        "duration": {
+          "type": "number",
+          "description": "时值：1=四分音符, 0.5=八分, 0.25=十六分, 2=二分, 4=全音符",
+          "enum": [0.125, 0.25, 0.5, 1, 2, 4]
+        },
+        "dot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "附点数量：0=无, 1=单附点, 2=双附点",
+          "default": 0
+        },
+        "accidental": {
+          "type": "string",
+          "enum": ["sharp", "flat", "natural"],
+          "description": "升降号"
+        },
+        "accidentalPosition": {
+          "type": "string",
+          "enum": ["before", "after"],
+          "description": "升降号位置",
+          "default": "before"
+        },
+        "techniques": {
+          "type": "array",
+          "description": "竹笛技巧列表",
+          "items": {
+            "$ref": "#/$defs/diziTechnique"
+          }
+        },
+        "tieId": {
+          "type": "string",
+          "description": "连音线 ID"
+        },
+        "slurId": {
+          "type": "string",
+          "description": "圆滑线 ID"
+        },
+        "tripletId": {
+          "type": "string",
+          "description": "三连音组 ID"
+        },
+        "accent": {
+          "type": "boolean",
+          "description": "重音标记",
+          "default": false
+        },
+        "tenuto": {
+          "type": "boolean",
+          "description": "保持音标记",
+          "default": false
+        },
+        "fermata": {
+          "type": "boolean",
+          "description": "延长记号（自由延长）",
+          "default": false
+        },
+        "lyric": {
+          "type": "string",
+          "description": "歌词"
+        }
+      }
+    },
+    "dash": {
+      "type": "object",
+      "required": ["type", "duration"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "dash",
+          "description": "增时线标识"
+        },
+        "duration": {
+          "type": "number",
+          "description": "时值",
+          "enum": [1, 2, 4]
+        },
+        "tieId": {
+          "type": "string",
+          "description": "连音线 ID"
+        }
+      }
+    },
+    "diziTechnique": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "zengyin", "dieyin", "liyin", "huayin", "dayin",
+            "yinyin", "chanyin", "qizhenyin", "tuyin", "huashe",
+            "xunhuan", "fanyin"
+          ],
+          "description": "竹笛技巧类型"
+        },
+        "graceNotes": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "description": "倚音附加音符（仅 yinyin 使用）"
+        },
+        "slideDirection": {
+          "type": "string",
+          "enum": ["up", "down"],
+          "description": "滑音方向（仅 huayin 使用）"
+        },
+        "liyinDirection": {
+          "type": "string",
+          "enum": ["up", "down"],
+          "description": "历音方向（仅 liyin 使用）"
+        },
+        "articulation": {
+          "type": "string",
+          "enum": ["single", "double", "triple"],
+          "description": "吐音类型（仅 tuyin 使用）"
+        },
+        "giftPitch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7,
+          "description": "赠音音高（仅 zengyin 使用）"
+        }
+      }
+    }
+  }
+}
